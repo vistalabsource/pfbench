@@ -40,6 +40,14 @@ function calculateScore(seconds) {
   return Math.max(0, Math.min(50, 50 - Math.round(seconds)));
 }
 
+function clampScore(score, maxScore) {
+  return Math.max(0, Math.min(maxScore, Math.round(score)));
+}
+
+function calculateAdjustedScore(seconds) {
+  return clampScore(calculateScore(seconds) - Math.trunc(seconds), 50);
+}
+
 async function runSingleBenchmark() {
   const startTime = performance.now();
   let result = 0;
@@ -147,23 +155,23 @@ startBenchmark.addEventListener("click", async () => {
   try {
     updateLog("シングル計測を開始中...");
     const single = await runSingleBenchmark();
-    const singleScore = calculateScore(single.seconds);
+    const singleScore = calculateAdjustedScore(single.seconds);
     benchScoreSingle.textContent = `${singleScore} / 50`;
     benchScoreMulti.textContent = "計測中...";
 
     updateLog("マルチ計測を開始中...");
     await waitForUi();
     const multi = await runMultiBenchmark();
-    const multiScore = calculateScore(multi.seconds);
+    const multiScore = calculateAdjustedScore(multi.seconds);
     benchScoreMulti.textContent = `${multiScore} / 50`;
 
     if (single.result !== multi.result) {
       throw new Error("シングルとマルチの計算結果が一致しません");
     }
 
-    resultScore.textContent = `${singleScore + multiScore} / 100`;
-
     const totalSeconds = (performance.now() - totalStartTime) / 1000;
+    const totalScore = clampScore(singleScore + multiScore - Math.trunc(totalSeconds), 100);
+    resultScore.textContent = `${totalScore} / 100`;
     benchTime.textContent = `${totalSeconds.toFixed(3)} 秒`;
     updateLog(
       `終了！\nシングル: ${single.seconds.toFixed(3)} 秒\nマルチ: ${multi.seconds.toFixed(3)} 秒 (${multi.workers} workers)`
