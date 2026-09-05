@@ -145,13 +145,13 @@ startBenchmark.addEventListener("click", async () => {
   const totalStartTime = performance.now();
 
   try {
-    updateLog("シングル計測を開始します");
+    updateLog("シングル計測を開始中...");
     const single = await runSingleBenchmark();
     const singleScore = calculateScore(single.seconds);
     benchScoreSingle.textContent = `${singleScore} / 50`;
     benchScoreMulti.textContent = "計測中...";
 
-    updateLog("マルチ計測を開始します");
+    updateLog("マルチ計測を開始中...");
     await waitForUi();
     const multi = await runMultiBenchmark();
     const multiScore = calculateScore(multi.seconds);
