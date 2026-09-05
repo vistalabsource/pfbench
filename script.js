@@ -48,6 +48,10 @@ function calculateAdjustedScore(seconds) {
   return clampScore(calculateScore(seconds) - Math.trunc(seconds), 50);
 }
 
+function calculateTotalScore(singleScore, multiScore, totalSeconds) {
+  return clampScore(singleScore + multiScore - Math.trunc(totalSeconds), 100);
+}
+
 async function runSingleBenchmark() {
   const startTime = performance.now();
   let result = 0;
@@ -145,10 +149,6 @@ async function runMultiBenchmark() {
 
 startBenchmark.addEventListener("click", async () => {
   startBenchmark.disabled = true;
-  benchTime.textContent = "計測中...";
-  benchScoreSingle.textContent = "計測中...";
-  benchScoreMulti.textContent = "待機中...";
-  resultScore.textContent = "- / 100";
 
   const totalStartTime = performance.now();
 
@@ -156,25 +156,20 @@ startBenchmark.addEventListener("click", async () => {
     updateLog("シングル計測を開始中...");
     const single = await runSingleBenchmark();
     const singleScore = calculateAdjustedScore(single.seconds);
-    benchScoreSingle.textContent = `${singleScore} / 50`;
-    benchScoreMulti.textContent = "計測中...";
 
     updateLog("マルチ計測を開始中...");
     await waitForUi();
     const multi = await runMultiBenchmark();
     const multiScore = calculateAdjustedScore(multi.seconds);
-    benchScoreMulti.textContent = `${multiScore} / 50`;
 
     if (single.result !== multi.result) {
       throw new Error("シングルとマルチの計算結果が一致しません");
     }
 
     const totalSeconds = (performance.now() - totalStartTime) / 1000;
-    const totalScore = clampScore(singleScore + multiScore - Math.trunc(totalSeconds), 100);
-    resultScore.textContent = `${totalScore} / 100`;
-    benchTime.textContent = `${totalSeconds.toFixed(3)} 秒`;
+    const totalScore = calculateTotalScore(singleScore, multiScore, totalSeconds);
     updateLog(
-      `終了！\nシングル: ${single.seconds.toFixed(3)} 秒\nマルチ: ${multi.seconds.toFixed(3)} 秒 (${multi.workers} workers)`
+      `終了！\n\n\n---\nシングル: ${single.seconds.toFixed(3)} 秒\nマルチ: ${multi.seconds.toFixed(3)} 秒 (${multi.workers} workers)\n---\nシングル得点: ${singleScore} / 50\nマルチ得点: ${multiScore} / 50\n---\n総合得点: ${totalScore} / 100\n---`
     );
   } catch (error) {
     updateLog(`計測に失敗しました: ${error.message}`);
