@@ -63,7 +63,7 @@ function clampScore(score, maxScore) {
 
 // 調整済みスコアを算出する
 function calculateAdjustedScore(seconds) {
-  return clampScore(Math.trunc(calculateScore(seconds) - seconds), 50);
+  return calculateScore(seconds);
 }
 
 // 総合スコアを計算する
