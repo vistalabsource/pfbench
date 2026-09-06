@@ -42,7 +42,7 @@ function primeFactorization(num) {
 
 // ログ表示欄にメッセージを出す
 function updateLog(message) {
-  log.value = message;
+  log.textContent = message;
 }
 
 // UI の更新を最優先にするため、次のフレームまで待機させる
