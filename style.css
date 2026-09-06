@@ -1,6 +1,9 @@
 #log {
     width: 460px;
-    height: 15px;
+    height: 25px;
+    border: 1px solid black;
+    margin: 0 auto;
+    background-color: white;
 }
 
 #bench-result {
@@ -8,4 +11,5 @@
     height: 170px;
     border: 1px solid black;
     margin: 0 auto;
+    background-color: white;
 }
