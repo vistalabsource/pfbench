@@ -51,9 +51,9 @@ function waitForUi() {
 }
 
 // 秒数からスコアを算出する
-// 0〜50 の範囲に収める
+// 0〜10,000 の範囲に収める
 function calculateScore(seconds) {
-  return Math.max(0, Math.min(50, 50 - Math.round(seconds)));
+  return Math.max(0, Math.min(99999, 99999 - Math.round(seconds)));
 }
 
 // スコアを指定範囲内に丸める補助関数
@@ -67,9 +67,9 @@ function calculateAdjustedScore(seconds) {
 }
 
 // 総合スコアを計算する
-// シングル、マルチ、全体処理時間のバランスを重視する
-function calculateTotalScore(singleScore, multiScore, totalSeconds) {
-  return clampScore(singleScore + multiScore - Math.trunc(totalSeconds), 100);
+// シングルとマルチの平均を0〜99,999の範囲で返す
+function calculateTotalScore(singleScore, multiScore) {
+  return clampScore((singleScore + multiScore) / 2, 99999);
 }
 
 // シングルスレッドでベンチマークを実行する
@@ -181,8 +181,6 @@ async function runMultiBenchmark() {
 startBenchmark.addEventListener("click", async () => {
   startBenchmark.disabled = true;
 
-  const totalStartTime = performance.now();
-
   try {
     updateLog("シングル計測を開始中...");
     const single = await runSingleBenchmark();
@@ -202,8 +200,7 @@ startBenchmark.addEventListener("click", async () => {
       throw new Error("シングルとマルチの計算結果が一致しません");
     }
 
-    const totalSeconds = (performance.now() - totalStartTime) / 1000;
-    const totalScore = calculateTotalScore(singleScore, multiScore, totalSeconds);
+    const totalScore = calculateTotalScore(singleScore, multiScore);
 
     updateLog(`終了！`);
 
