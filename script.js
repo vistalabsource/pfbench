@@ -14,6 +14,8 @@ const displayTotalScore = document.getElementById("display-total-score");
 // 対象の数値は素因数分解の負荷をかけるための固定値
 const FACTORIZATION_TARGET = 1145141919810;
 const BENCHMARK_ITERATIONS = 364364;
+const SCORE_FAST_REFERENCE_SECONDS = 3;
+const SCORE_SLOW_REFERENCE_SECONDS = 30;
 
 // 利用可能な CPU コア数を基に、マルチスレッド側のワーカー数を決定する
 // ただし最低 2 つは使うようにする
@@ -53,7 +55,11 @@ function waitForUi() {
 // 秒数からスコアを算出する
 // 0〜10,000 の範囲に収める
 function calculateScore(seconds) {
-  return Math.max(0, Math.min(99999, 99999 - Math.round(seconds)));
+  const score =
+    ((SCORE_SLOW_REFERENCE_SECONDS - seconds) /
+      (SCORE_SLOW_REFERENCE_SECONDS - SCORE_FAST_REFERENCE_SECONDS)) *
+    10000;
+  return clampScore(score, 10000);
 }
 
 // スコアを指定範囲内に丸める補助関数
@@ -67,9 +73,9 @@ function calculateAdjustedScore(seconds) {
 }
 
 // 総合スコアを計算する
-// シングルとマルチの平均を0〜99,999の範囲で返す
+// シングルとマルチの平均を0〜10,000の範囲で返す
 function calculateTotalScore(singleScore, multiScore) {
-  return clampScore((singleScore + multiScore) / 2, 99999);
+  return clampScore((singleScore + multiScore) / 2, 10000);
 }
 
 // シングルスレッドでベンチマークを実行する
