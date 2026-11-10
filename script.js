@@ -141,7 +141,7 @@ startBenchmark.addEventListener("click", async () => {
     const singleCount = await runSingleBenchmark();
     displaySingleScore.textContent = singleCount.toLocaleString();
 
-    updateLog("マルチ計測を開始中...");
+    updateLog("マルチ計測中...");
     await waitForUi();
     const multiCount = await runMultiBenchmark();
     displayMultiScore.textContent = multiCount.toLocaleString();
