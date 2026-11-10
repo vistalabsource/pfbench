@@ -8,7 +8,7 @@ const displayMultiScore = document.getElementById("display-multi-score");
 
 // ベンチマークで使う定数
 // 対象の数値は素因数分解の負荷をかけるための固定値
-const FACTORIZATION_TARGET = 1145141919810;
+const FACTORIZATION_TARGET = 1145141919810364364;
 const BENCHMARK_DURATION_MS = 10_000;
 
 // 利用可能な CPU コア数を基に、マルチスレッド側のワーカー数を決定する
