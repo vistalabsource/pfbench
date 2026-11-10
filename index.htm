@@ -17,26 +17,22 @@
         </style>
 
         <link rel="stylesheet" href="style.css">
-        <script src="script.js?v=2.0.4" defer></script>
+        <script src="script.js?v=2.1.0" defer></script>
     </head>
 
     <body>
         <h1>素因数分解ベンチ 2.0</h1>
         <p>Prime Factorization Benchmark</p>
         <hr>
-        <p>計算内容: 1145141919810を364364回素因数分解します。</p>
+        <p>計算内容: 1145141919810を10秒間で何回素因数分解できるか計測します。</p>
         <button id="start-benchmark" type="button">開始（シングル・マルチ両方）</button>
         <br>
         <br>
-        <div id="log">総合得点の計算式: (シングル + マルチ) / 2</div> <br>
+        <div id="log">10秒間に素因数分解できた回数を計測します。</div> <br>
         <div id="bench-result">
-            シングル秒: <span id="display-single-second">0.000</span> 秒<br>
-            マルチ秒: <span id="display-multi-second">0.000</span> 秒<br>
+            計測時間: 各方式10秒<br>
             <hr>
-            シングル得点: <span id="display-single-score">00000</span><br>
-            マルチ得点: <span id="display-multi-score">00000</span>
-            <hr>
-            <strong>総合得点: <span id="display-total-score">00000</span></strong>
-        </div>
+            <strong>シングル回数: <span id="display-single-score">0</span> 回<br>
+            マルチ合計回数: <span id="display-multi-score">0</span> 回</strong>
     </body>
 </html>

@@ -3,19 +3,13 @@
 const startBenchmark = document.getElementById("start-benchmark");
 const log = document.getElementById("log");
 
-const displaySingleSeconds = document.getElementById("display-single-second");
-const displayMultiSeconds = document.getElementById("display-multi-second");
-
 const displaySingleScore = document.getElementById("display-single-score");
 const displayMultiScore = document.getElementById("display-multi-score");
-const displayTotalScore = document.getElementById("display-total-score");
 
 // ベンチマークで使う定数
 // 対象の数値は素因数分解の負荷をかけるための固定値
 const FACTORIZATION_TARGET = 1145141919810;
-const BENCHMARK_ITERATIONS = 364364;
-const SCORE_FAST_REFERENCE_SECONDS = 3;
-const SCORE_SLOW_REFERENCE_SECONDS = 30;
+const BENCHMARK_DURATION_MS = 10_000;
 
 // 利用可能な CPU コア数を基に、マルチスレッド側のワーカー数を決定する
 // ただし最低 2 つは使うようにする
@@ -52,53 +46,21 @@ function waitForUi() {
   return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
-// 秒数からスコアを算出する
-// 0〜10,000 の範囲に収める
-function calculateScore(seconds) {
-  const score =
-    ((SCORE_SLOW_REFERENCE_SECONDS - seconds) /
-      (SCORE_SLOW_REFERENCE_SECONDS - SCORE_FAST_REFERENCE_SECONDS)) *
-    10000;
-  return clampScore(score, 10000);
-}
-
-// スコアを指定範囲内に丸める補助関数
-function clampScore(score, maxScore) {
-  return Math.max(0, Math.min(maxScore, Math.round(score)));
-}
-
-// 調整済みスコアを算出する
-function calculateAdjustedScore(seconds) {
-  return calculateScore(seconds);
-}
-
-// 総合スコアを計算する
-// シングルとマルチの平均を0〜10,000の範囲で返す
-function calculateTotalScore(singleScore, multiScore) {
-  return clampScore((singleScore + multiScore) / 2, 10000);
-}
-
 // シングルスレッドでベンチマークを実行する
 async function runSingleBenchmark() {
-  const startTime = performance.now();
-  let result = 0;
+  const deadline = performance.now() + BENCHMARK_DURATION_MS;
+  let count = 0;
 
-  for (let i = 0; i < BENCHMARK_ITERATIONS; i++) {
-    // 1 回ごとに素因数分解を行い、因数の個数を加算する
-    result += primeFactorization(FACTORIZATION_TARGET).length;
-
-    // 途中経過をログに出し、UI の描画を空ける
-    if (i % 1000 === 0 || i === BENCHMARK_ITERATIONS - 1) {
-      updateLog(`シングル: ${i + 1} / ${BENCHMARK_ITERATIONS}`);
-      await waitForUi();
+  while (performance.now() < deadline) {
+    for (let i = 0; i < 1000 && performance.now() < deadline; i++) {
+      primeFactorization(FACTORIZATION_TARGET);
+      count++;
     }
+    updateLog(`シングル計測中: ${count.toLocaleString()} 回`);
+    await waitForUi();
   }
 
-  const endTime = performance.now();
-  return {
-    result,
-    seconds: (endTime - startTime) / 1000,
-  };
+  return count;
 }
 
 // Worker 用のソースコードを Blob から生成する
@@ -108,14 +70,16 @@ function createBenchmarkWorkerUrl() {
 ${primeFactorization.toString()}
 
 self.onmessage = (event) => {
-  const { iterations, target } = event.data;
-  let result = 0;
+  const { duration, target } = event.data;
+  const deadline = performance.now() + duration;
+  let count = 0;
 
-  for (let i = 0; i < iterations; i++) {
-    result += primeFactorization(target).length;
+  while (performance.now() < deadline) {
+    primeFactorization(target);
+    count++;
   }
 
-  self.postMessage({ result });
+  self.postMessage({ count });
 };
 `;
 
@@ -123,13 +87,13 @@ self.onmessage = (event) => {
 }
 
 // 1 つの Worker に対してベンチマークを実行する
-function runWorkerBenchmark(workerUrl, iterations) {
+function runWorkerBenchmark(workerUrl) {
   return new Promise((resolve, reject) => {
     const worker = new Worker(workerUrl);
 
     worker.onmessage = (event) => {
       worker.terminate();
-      resolve(event.data.result);
+      resolve(event.data.count);
     };
 
     worker.onerror = (event) => {
@@ -137,10 +101,7 @@ function runWorkerBenchmark(workerUrl, iterations) {
       reject(new Error(event.message || "Worker benchmark failed"));
     };
 
-    worker.postMessage({
-      iterations,
-      target: FACTORIZATION_TARGET,
-    });
+    worker.postMessage({ duration: BENCHMARK_DURATION_MS, target: FACTORIZATION_TARGET });
   });
 }
 
@@ -151,32 +112,20 @@ async function runMultiBenchmark() {
     throw new Error("このブラウザは Web Worker に対応していません");
   }
 
-  const startTime = performance.now();
   const workerUrl = createBenchmarkWorkerUrl();
   let completedWorkers = 0;
 
-  // ワーカー数で処理を分割し、余りは前のワーカーに配分する
-  const baseIterations = Math.floor(BENCHMARK_ITERATIONS / MULTI_WORKER_COUNT);
-  const remainder = BENCHMARK_ITERATIONS % MULTI_WORKER_COUNT;
   const tasks = Array.from({ length: MULTI_WORKER_COUNT }, (_, index) => {
-    const iterations = baseIterations + (index < remainder ? 1 : 0);
-
-    return runWorkerBenchmark(workerUrl, iterations).then((result) => {
+    return runWorkerBenchmark(workerUrl).then((count) => {
       completedWorkers++;
       updateLog(`マルチ: ${completedWorkers} / ${MULTI_WORKER_COUNT} workers`);
-      return result;
+      return count;
     });
   });
 
   try {
     const results = await Promise.all(tasks);
-    const endTime = performance.now();
-
-    return {
-      result: results.reduce((total, result) => total + result, 0),
-      seconds: (endTime - startTime) / 1000,
-      workers: MULTI_WORKER_COUNT,
-    };
+    return results.reduce((total, count) => total + count, 0);
   } finally {
     // Blob URL は使い終わったら破棄する
     URL.revokeObjectURL(workerUrl);
@@ -189,28 +138,15 @@ startBenchmark.addEventListener("click", async () => {
 
   try {
     updateLog("シングル計測を開始中...");
-    const single = await runSingleBenchmark();
-    const singleScore = calculateAdjustedScore(single.seconds);
-    displaySingleSeconds.textContent = single.seconds.toFixed(3);
-    displaySingleScore.textContent = singleScore;
+    const singleCount = await runSingleBenchmark();
+    displaySingleScore.textContent = singleCount.toLocaleString();
 
     updateLog("マルチ計測を開始中...");
     await waitForUi();
-    const multi = await runMultiBenchmark();
-    const multiScore = calculateAdjustedScore(multi.seconds);
-    displayMultiSeconds.textContent = multi.seconds.toFixed(3);
-    displayMultiScore.textContent = multiScore;
-
-    // シングルとマルチの最終結果が一致しているか確認
-    if (single.result !== multi.result) {
-      throw new Error("シングルとマルチの計算結果が一致しません");
-    }
-
-    const totalScore = calculateTotalScore(singleScore, multiScore);
+    const multiCount = await runMultiBenchmark();
+    displayMultiScore.textContent = multiCount.toLocaleString();
 
     updateLog(`終了！`);
-
-    displayTotalScore.textContent = totalScore;
 
   } catch (error) {
     updateLog(`計測に失敗しました: ${error.message}`);
